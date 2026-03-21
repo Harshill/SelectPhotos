@@ -17,6 +17,9 @@ config :select_photos, SelectPhotosWeb.Endpoint,
   secret_key_base: "/gUzFonukVTAabJwYb3/LZSbR39JG8bRWKcHv0AdFZbX48XYfgwWM5kCwqbGu07D",
   server: false
 
+# Skip thumbnail generation in tests
+config :select_photos, skip_thumbnails: true
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 

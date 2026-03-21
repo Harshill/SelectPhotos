@@ -17,8 +17,11 @@ defmodule SelectPhotosWeb.Router do
   scope "/", SelectPhotosWeb do
     pipe_through :browser
 
-    live "/", GalleryLive
+    live "/", DashboardLive
+    live "/gallery", GalleryLive
     live "/compare", ComparisonLive
+    live "/tournament", TournamentLive
+    live "/export", ExportLive
   end
 
   # Other scopes may use custom stacks.

@@ -240,8 +240,9 @@ defmodule SelectPhotosWeb.GalleryLive do
     ~H"""
     <div class={"relative group rounded-lg overflow-hidden bg-[#1C1B1B] #{@border_class} transition-all duration-200"}>
       <img
-        src={"/photos/#{@photo.filename}"}
+        src={"/thumbs/#{@photo.filename}"}
         alt={@photo.filename}
+        loading="lazy"
         class="w-full aspect-square object-cover cursor-pointer"
         phx-click="click_photo"
         phx-value-id={@photo.id}

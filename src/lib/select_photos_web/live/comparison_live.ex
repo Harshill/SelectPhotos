@@ -30,8 +30,8 @@ defmodule SelectPhotosWeb.ComparisonLive do
 
   @impl true
   def handle_event("confirm_primary", _params, socket) do
-    # The primary is confirmed — remove all alternates from the group
-    group = socket.assigns.current_group
+    # The primary is confirmed — reject and remove all alternates
+    group = Gallery.get_group_with_photos(socket.assigns.current_group.id)
 
     group.photos
     |> Enum.reject(& &1.is_primary)
@@ -40,8 +40,12 @@ defmodule SelectPhotosWeb.ComparisonLive do
       Gallery.remove_from_group(photo)
     end)
 
-    # Move to next group
-    {:noreply, advance_group(socket)}
+    # Also remove the primary from the group (it's now a standalone selected photo)
+    primary = Enum.find(group.photos, & &1.is_primary)
+    if primary, do: Gallery.remove_from_group_keep_status(primary)
+
+    # Reload groups and stay at current index (which now points to the next group)
+    {:noreply, reload_current_group(socket)}
   end
 
   @impl true
@@ -67,7 +71,9 @@ defmodule SelectPhotosWeb.ComparisonLive do
   defp reload_current_group(socket) do
     directory = socket.assigns.directory
     groups = Gallery.list_alternate_groups(directory)
-    socket |> assign(:groups, groups) |> assign_current_group()
+    # Clamp index in case groups shrunk
+    index = min(socket.assigns.current_index, max(length(groups) - 1, 0))
+    socket |> assign(:groups, groups) |> assign(:current_index, index) |> assign_current_group()
   end
 
   defp advance_group(socket) do
@@ -95,6 +101,18 @@ defmodule SelectPhotosWeb.ComparisonLive do
       group = Enum.at(groups, index)
 
       primary = Enum.find(group.photos, & &1.is_primary)
+
+      # If no primary exists (e.g. it was deselected), promote the first photo
+      {primary, group} =
+        if primary == nil and group.photos != [] do
+          first = hd(group.photos)
+          {:ok, promoted} = Gallery.swap_primary(group, first)
+          group = Gallery.get_group_with_photos(group.id)
+          {promoted, group}
+        else
+          {primary, group}
+        end
+
       alternates = Enum.reject(group.photos, & &1.is_primary)
 
       socket
@@ -117,7 +135,7 @@ defmodule SelectPhotosWeb.ComparisonLive do
               <p class="text-lg font-['Manrope'] font-bold mb-2">No groups to compare</p>
               <p class="text-sm mb-4">Go to the Gallery and select photos with alternates first</p>
               <a
-                href="/"
+                href="/gallery"
                 class="bg-gradient-to-br from-[#7BD0FF] to-[#009BD1] text-[#003549] px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest"
               >
                 Back to Gallery

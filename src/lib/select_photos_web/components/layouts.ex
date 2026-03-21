@@ -41,8 +41,11 @@ defmodule SelectPhotosWeb.Layouts do
           The Digital Darkroom
         </a>
         <nav class="hidden md:flex items-center gap-6 font-['Manrope'] font-bold text-sm tracking-wide">
-          <a href="/" class="text-[#C1C6D7] hover:text-[#E5E2E1] transition-colors">Gallery</a>
+          <a href="/" class="text-[#C1C6D7] hover:text-[#E5E2E1] transition-colors">Dashboard</a>
+          <a href="/gallery" class="text-[#C1C6D7] hover:text-[#E5E2E1] transition-colors">Gallery</a>
           <a href="/compare" class="text-[#C1C6D7] hover:text-[#E5E2E1] transition-colors">Compare</a>
+          <a href="/tournament" class="text-[#C1C6D7] hover:text-[#E5E2E1] transition-colors">Tournament</a>
+          <a href="/export" class="text-[#C1C6D7] hover:text-[#E5E2E1] transition-colors">Export</a>
         </nav>
       </div>
     </header>
