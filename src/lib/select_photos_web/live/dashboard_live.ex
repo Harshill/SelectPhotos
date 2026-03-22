@@ -43,12 +43,12 @@ defmodule SelectPhotosWeb.DashboardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
-      <div class="flex flex-col h-full overflow-y-auto">
+    <Layouts.app flash={@flash} active_page={:dashboard} selected_count={@selected} total_count={@total}>
+      <div class="flex flex-col h-full overflow-y-auto hide-scrollbar">
         <div class="px-10 py-8">
           <%!-- Header --%>
-          <div class="mb-10">
-            <h1 class="font-['Manrope'] font-extrabold text-3xl text-[#E5E2E1] tracking-tight mb-2">
+          <div class="mb-12">
+            <h1 class="font-['Manrope'] font-extrabold text-4xl text-[#E5E2E1] tracking-tight mb-2">
               Project Dashboard
             </h1>
             <p class="text-[#C1C6D7] text-sm">
@@ -71,8 +71,8 @@ defmodule SelectPhotosWeb.DashboardLive do
                       {@total} Photos
                     </h3>
                   </div>
-                  <div class="bg-[#2A2A2A] p-3 rounded-lg text-[#7BD0FF] text-xl">
-                    &#128247;
+                  <div class="bg-[#2A2A2A] p-3 rounded-lg">
+                    <span class="material-symbols-outlined text-[#7BD0FF]">photo_library</span>
                   </div>
                 </div>
 
@@ -85,7 +85,7 @@ defmodule SelectPhotosWeb.DashboardLive do
                     </div>
                     <div class="w-full h-2 bg-[#353534] rounded-full overflow-hidden">
                       <div
-                        class="h-full bg-gradient-to-r from-[#7BD0FF] to-[#009BD1] rounded-full transition-all duration-500"
+                        class="h-full selection-gradient rounded-full transition-all duration-500"
                         style={"width: #{@progress}%"}
                       >
                       </div>
@@ -98,9 +98,10 @@ defmodule SelectPhotosWeb.DashboardLive do
                   <%!-- Start selection CTA --%>
                   <a
                     href="/gallery"
-                    class="w-full bg-gradient-to-r from-[#7BD0FF] to-[#009BD1] text-[#003549] font-['Manrope'] font-extrabold py-4 rounded-xl text-lg flex items-center justify-center gap-2"
+                    class="w-full selection-gradient text-[#003549] font-['Manrope'] font-extrabold py-4 rounded-xl text-lg flex items-center justify-center gap-2 group"
                   >
-                    <%= if @selected == 0, do: "Start Selection", else: "Continue Selection" %>
+                    <span><%= if @selected == 0, do: "Start Selection", else: "Continue Selection" %></span>
+                    <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
                   </a>
                 </div>
               </div>
@@ -120,16 +121,16 @@ defmodule SelectPhotosWeb.DashboardLive do
             </div>
 
             <%!-- Right column: Preview grid --%>
-            <div class="col-span-12 lg:col-span-8 bg-[#1C1B1B] rounded-xl border border-[#414755]/10 overflow-hidden">
+            <div class="col-span-12 lg:col-span-8 bg-[#1C1B1B] rounded-xl border border-[#414755]/10 p-2 overflow-hidden">
               <div class="p-6 flex justify-between items-center">
                 <h4 class="text-xs font-bold uppercase tracking-widest text-[#C1C6D7]">
                   Import Preview
                 </h4>
                 <a href="/gallery" class="text-xs font-bold text-[#7BD0FF] flex items-center gap-1 hover:underline">
-                  View All
+                  View All <span class="material-symbols-outlined text-sm">open_in_new</span>
                 </a>
               </div>
-              <div class="grid grid-cols-2 md:grid-cols-3 gap-2 p-2 pt-0">
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <%= for photo <- @preview_photos do %>
                   <div class="relative group overflow-hidden rounded-lg bg-[#2A2A2A] aspect-square">
                     <img
@@ -146,20 +147,20 @@ defmodule SelectPhotosWeb.DashboardLive do
               </div>
             </div>
 
-            <%!-- Workflow status bar --%>
-            <div class="col-span-12 bg-[#353534]/50 backdrop-blur p-4 rounded-xl border border-[#414755]/10 flex items-center justify-between">
+            <%!-- Workflow status bar (glassmorphism) --%>
+            <div class="col-span-12 glass-panel p-4 rounded-xl border border-white/5 flex items-center justify-between mt-2">
               <div class="flex items-center gap-6">
-                <.workflow_step label="Gallery" href="/gallery" done={@total > 0} active={@selected == 0 and @total > 0} />
-                <div class="w-8 h-px bg-[#414755]"></div>
-                <.workflow_step label="Compare" href="/compare" done={@unresolved_groups == 0 and @selected > 0} active={@unresolved_groups > 0} />
-                <div class="w-8 h-px bg-[#414755]"></div>
-                <.workflow_step label="Tournament" href="/tournament" done={false} active={@selected > 25 and @unresolved_groups == 0} />
-                <div class="w-8 h-px bg-[#414755]"></div>
-                <.workflow_step label="Export" href="/export" done={false} active={@selected > 0 and @selected <= 25} />
+                <.workflow_step label="Gallery" href="/gallery" done={@total > 0} active={@selected == 0 and @total > 0} icon="grid_view" />
+                <div class="w-8 h-px bg-[#414755]/30"></div>
+                <.workflow_step label="Compare" href="/compare" done={@unresolved_groups == 0 and @selected > 0} active={@unresolved_groups > 0} icon="compare" />
+                <div class="w-8 h-px bg-[#414755]/30"></div>
+                <.workflow_step label="Tournament" href="/tournament" done={false} active={@selected > 25 and @unresolved_groups == 0} icon="emoji_events" />
+                <div class="w-8 h-px bg-[#414755]/30"></div>
+                <.workflow_step label="Export" href="/export" done={false} active={@selected > 0 and @selected <= 25} icon="ios_share" />
               </div>
               <div class="flex items-center gap-2 text-xs text-[#C1C6D7]">
-                <span class="text-[#C1C6D7]/50">Directory:</span>
-                <span class="font-mono text-[10px]">{@directory}</span>
+                <span class="material-symbols-outlined text-sm text-[#C1C6D7]/50" style="font-variation-settings: 'FILL' 1;">folder</span>
+                <span class="font-mono text-[10px] text-[#C1C6D7]/70">{@directory}</span>
               </div>
             </div>
           </div>
@@ -194,7 +195,7 @@ defmodule SelectPhotosWeb.DashboardLive do
     ~H"""
     <a href={@href} class={"flex items-center gap-2 text-xs font-bold uppercase tracking-widest #{@text_class} hover:text-[#7BD0FF] transition-colors"}>
       <%= if @done do %>
-        <span class="w-4 h-4 rounded-full bg-[#7BD0FF]/20 flex items-center justify-center text-[8px] text-[#7BD0FF]">&#10003;</span>
+        <span class="material-symbols-outlined text-sm text-[#7BD0FF]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
       <% end %>
       <%= if @active do %>
         <span class="w-2 h-2 rounded-full bg-[#7BD0FF] animate-pulse"></span>

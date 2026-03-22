@@ -113,7 +113,7 @@ defmodule SelectPhotosWeb.TournamentLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} active_page={:tournament} selected_count={@selected_count} total_count={@selected_count}>
       <div class="flex flex-col h-full">
         <%= case @state do %>
           <% :setup -> %>
@@ -145,6 +145,9 @@ defmodule SelectPhotosWeb.TournamentLive do
     ~H"""
     <div class="flex items-center justify-center h-full">
       <div class="text-center max-w-md">
+        <div class="w-16 h-16 rounded-full bg-[#26467D]/30 flex items-center justify-center mx-auto mb-6">
+          <span class="material-symbols-outlined text-3xl text-[#7BD0FF]">emoji_events</span>
+        </div>
         <h1 class="font-['Manrope'] font-extrabold text-2xl text-[#E5E2E1] tracking-tight mb-2">
           Tournament Mode
         </h1>
@@ -165,7 +168,7 @@ defmodule SelectPhotosWeb.TournamentLive do
                 value={@target}
                 min="1"
                 name="target"
-                class="bg-[#353534] border border-[#414755]/30 rounded-lg px-3 py-1 text-sm text-[#E5E2E1] w-20 text-right focus:outline-none focus:border-[#7BD0FF]/50"
+                class="bg-[#353534] border-none rounded-lg px-3 py-1 text-sm text-[#E5E2E1] w-20 text-right focus:ring-1 focus:ring-[#7BD0FF]"
               />
             </form>
           </div>
@@ -193,7 +196,7 @@ defmodule SelectPhotosWeb.TournamentLive do
             </p>
             <button
               phx-click="start_tournament"
-              class="bg-gradient-to-br from-[#7BD0FF] to-[#009BD1] text-[#003549] px-8 py-3 rounded-lg text-sm font-bold uppercase tracking-widest"
+              class="selection-gradient text-[#003549] px-8 py-3 rounded-lg text-sm font-bold uppercase tracking-widest"
             >
               Start Tournament
             </button>
@@ -211,32 +214,32 @@ defmodule SelectPhotosWeb.TournamentLive do
   defp playing_view(assigns) do
     ~H"""
     <div class="flex flex-col h-full">
-      <%!-- HUD bar --%>
-      <div class="flex items-center justify-between px-6 py-4 border-b border-[#414755]/20">
+      <%!-- Tournament HUD (glass panel) --%>
+      <div class="mx-6 mt-6 flex items-center justify-between glass-panel px-8 py-4 rounded-xl border border-[#414755]/10">
         <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-full bg-[#26467D]/30 flex items-center justify-center text-[#7BD0FF] text-lg font-bold">
-            R{@round}
+          <div class="w-10 h-10 rounded-full bg-[#26467D] flex items-center justify-center text-[#7BD0FF]">
+            <span class="material-symbols-outlined">account_tree</span>
           </div>
           <div>
             <h1 class="text-sm font-['Manrope'] font-extrabold text-[#E5E2E1] tracking-tight">
               Round {@round}: Match {@stats.completed + 1} of {@stats.total}
             </h1>
             <p class="text-[10px] text-[#C1C6D7] uppercase tracking-widest">
-              Selecting top {@target}
+              Selecting Top {@target}
             </p>
           </div>
         </div>
-        <div class="flex items-center gap-6">
+        <div class="flex items-center gap-8">
           <div class="flex items-center gap-3">
             <span class="text-[10px] font-bold text-[#C1C6D7]/50 uppercase tracking-widest">Progress</span>
             <div class="w-32 bg-[#353534] h-1.5 rounded-full overflow-hidden">
               <div
                 class="bg-[#7BD0FF] h-full transition-all duration-300"
-                style={"width: #{if @stats.total > 0, do: @stats.completed / @stats.total * 100, else: 0}%"}
+                style={"width: #{if @stats.total > 0, do: @stats.completed / @stats.total * 100, else: 0}%; box-shadow: 0 0 8px #7BD0FF;"}
               >
               </div>
             </div>
-            <span class="text-xs font-bold text-[#7BD0FF]">{@stats.remaining} left</span>
+            <span class="text-xs font-bold font-['Manrope'] text-[#7BD0FF]">{@stats.remaining} left</span>
           </div>
           <button
             phx-click="reset_tournament"
@@ -249,56 +252,70 @@ defmodule SelectPhotosWeb.TournamentLive do
 
       <%!-- Match area --%>
       <%= if @current_match do %>
-        <div class="flex-1 flex items-center justify-center p-8 relative">
-          <div class="w-full max-w-6xl grid grid-cols-2 gap-8 items-stretch">
+        <div class="flex-1 flex items-center justify-center p-8 relative min-h-0">
+          <div class="w-full max-w-6xl grid grid-cols-2 gap-8 h-full max-h-full">
             <%!-- Left competitor --%>
-            <div class="flex flex-col gap-4 group">
-              <div class="relative flex-1 rounded-xl overflow-hidden bg-[#1C1B1B] border-2 border-transparent group-hover:border-[#7BD0FF]/30 transition-all duration-300 shadow-2xl">
+            <div class="flex flex-col gap-4 min-h-0">
+              <div class="relative flex-1 min-h-0 rounded-xl overflow-hidden bg-[#1C1B1B] border-2 border-transparent hover:border-[#7BD0FF]/30 transition-all duration-300 shadow-2xl">
                 <img
                   src={"/photos/#{@current_match.photo_left.filename}"}
                   alt={@current_match.photo_left.filename}
                   class="w-full h-full object-contain"
                 />
-                <div class="absolute top-4 right-4 bg-[#353534]/80 backdrop-blur text-[10px] font-bold px-2 py-1 rounded text-[#E5E2E1] border border-[#414755]/20">
-                  {@current_match.photo_left.filename}
-                </div>
               </div>
               <button
                 phx-click="pick_winner"
                 phx-value-id={@current_match.photo_left.id}
-                class="w-full py-4 bg-[#353534] hover:bg-gradient-to-r hover:from-[#7BD0FF] hover:to-[#009BD1] hover:text-[#003549] transition-all duration-300 rounded-xl flex items-center justify-center gap-3 text-sm font-['Manrope'] font-bold uppercase tracking-widest text-[#E5E2E1]"
+                class="shrink-0 w-full py-4 bg-[#353534] hover:bg-gradient-to-r hover:from-[#7BD0FF] hover:to-[#009BD1] hover:text-[#003549] transition-all duration-300 rounded-xl flex items-center justify-center gap-3 group/btn cursor-pointer"
               >
-                Pick Winner
+                <span class="text-sm font-['Manrope'] font-bold uppercase tracking-widest">{@current_match.photo_left.filename}</span>
+                <span class="material-symbols-outlined text-lg opacity-0 group-hover/btn:opacity-100 transition-opacity" style="font-variation-settings: 'FILL' 1;">check_circle</span>
               </button>
             </div>
 
             <%!-- VS badge --%>
             <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-              <div class="w-12 h-12 rounded-full bg-[#353534]/80 backdrop-blur border border-[#7BD0FF]/40 flex items-center justify-center shadow-[0_0_20px_rgba(123,208,255,0.2)]">
+              <div class="w-12 h-12 rounded-full glass-panel border border-[#7BD0FF]/40 flex items-center justify-center shadow-[0_0_20px_rgba(123,208,255,0.2)]">
                 <span class="text-xs font-['Manrope'] font-black text-[#7BD0FF] italic">VS</span>
               </div>
             </div>
 
             <%!-- Right competitor --%>
-            <div class="flex flex-col gap-4 group">
-              <div class="relative flex-1 rounded-xl overflow-hidden bg-[#1C1B1B] border-2 border-transparent group-hover:border-[#7BD0FF]/30 transition-all duration-300 shadow-2xl">
+            <div class="flex flex-col gap-4 min-h-0">
+              <div class="relative flex-1 min-h-0 rounded-xl overflow-hidden bg-[#1C1B1B] border-2 border-transparent hover:border-[#7BD0FF]/30 transition-all duration-300 shadow-2xl">
                 <img
                   src={"/photos/#{@current_match.photo_right.filename}"}
                   alt={@current_match.photo_right.filename}
                   class="w-full h-full object-contain"
                 />
-                <div class="absolute top-4 right-4 bg-[#353534]/80 backdrop-blur text-[10px] font-bold px-2 py-1 rounded text-[#E5E2E1] border border-[#414755]/20">
-                  {@current_match.photo_right.filename}
-                </div>
               </div>
               <button
                 phx-click="pick_winner"
                 phx-value-id={@current_match.photo_right.id}
-                class="w-full py-4 bg-[#353534] hover:bg-gradient-to-r hover:from-[#7BD0FF] hover:to-[#009BD1] hover:text-[#003549] transition-all duration-300 rounded-xl flex items-center justify-center gap-3 text-sm font-['Manrope'] font-bold uppercase tracking-widest text-[#E5E2E1]"
+                class="shrink-0 w-full py-4 bg-[#353534] hover:bg-gradient-to-r hover:from-[#7BD0FF] hover:to-[#009BD1] hover:text-[#003549] transition-all duration-300 rounded-xl flex items-center justify-center gap-3 group/btn cursor-pointer"
               >
-                Pick Winner
+                <span class="text-sm font-['Manrope'] font-bold uppercase tracking-widest">{@current_match.photo_right.filename}</span>
+                <span class="material-symbols-outlined text-lg opacity-0 group-hover/btn:opacity-100 transition-opacity" style="font-variation-settings: 'FILL' 1;">check_circle</span>
               </button>
             </div>
+          </div>
+        </div>
+
+        <%!-- Bottom toolbar --%>
+        <div class="flex items-center justify-center pb-6">
+          <div class="flex items-center gap-4 px-6 py-3 rounded-full glass-panel border border-[#414755]/10">
+            <button class="p-2 hover:bg-[#2A2A2A] rounded-lg text-[#C1C6D7] flex items-center gap-2 transition-all">
+              <span class="material-symbols-outlined text-sm">keyboard_arrow_left</span>
+              <span class="text-[10px] font-bold uppercase tracking-widest">Undo Last</span>
+            </button>
+            <div class="w-px h-4 bg-[#414755]/20 mx-2"></div>
+            <button
+              phx-click="reset_tournament"
+              class="p-2 hover:bg-[#2A2A2A] rounded-lg text-[#C1C6D7] flex items-center gap-2 transition-all"
+            >
+              <span class="text-[10px] font-bold uppercase tracking-widest">Exit Mode</span>
+              <span class="material-symbols-outlined text-sm">close</span>
+            </button>
           </div>
         </div>
       <% end %>
@@ -309,14 +326,19 @@ defmodule SelectPhotosWeb.TournamentLive do
   defp finished_view(assigns) do
     ~H"""
     <div class="flex flex-col h-full">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-[#414755]/20">
-        <div>
-          <h1 class="font-['Manrope'] font-extrabold text-xl text-[#E5E2E1] tracking-tight">
-            Tournament Complete
-          </h1>
-          <p class="text-[#C1C6D7] text-sm">
-            {length(@winners)} photos made the final cut
-          </p>
+      <div class="flex items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 rounded-full bg-[#26467D] flex items-center justify-center">
+            <span class="material-symbols-outlined text-[#7BD0FF]" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+          </div>
+          <div>
+            <h1 class="font-['Manrope'] font-extrabold text-xl text-[#E5E2E1] tracking-tight">
+              Tournament Complete
+            </h1>
+            <p class="text-[#C1C6D7] text-sm">
+              {length(@winners)} photos made the final cut
+            </p>
+          </div>
         </div>
         <div class="flex items-center gap-3">
           <button
@@ -327,21 +349,21 @@ defmodule SelectPhotosWeb.TournamentLive do
           </button>
           <a
             href="/export"
-            class="bg-gradient-to-br from-[#7BD0FF] to-[#009BD1] text-[#003549] px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest"
+            class="selection-gradient text-[#003549] px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-[#7BD0FF]/20"
           >
             Export
           </a>
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-6">
+      <div class="flex-1 overflow-y-auto p-6 hide-scrollbar">
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           <%= for photo <- @winners do %>
-            <div class="rounded-xl overflow-hidden bg-[#1C1B1B] ring-2 ring-[#7BD0FF]">
+            <div class="rounded-xl overflow-hidden bg-[#1C1B1B] ring-2 ring-[#7BD0FF] group">
               <img
                 src={"/photos/#{photo.filename}"}
                 alt={photo.filename}
-                class="w-full aspect-square object-cover"
+                class="w-full aspect-square object-cover transition-transform duration-500 group-hover:scale-110"
               />
               <div class="p-2">
                 <span class="text-[10px] text-[#C1C6D7] font-mono truncate block">{photo.filename}</span>

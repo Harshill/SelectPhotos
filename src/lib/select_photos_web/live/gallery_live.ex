@@ -92,16 +92,9 @@ defmodule SelectPhotosWeb.GalleryLive do
         {:noreply, put_flash(socket, :info, "This photo is an alternate. Remove it from its group first.")}
 
       _ ->
-        # Select photo, create group, and auto-enter alternate mode
-        {:ok, photo} = Gallery.select_photo(photo)
-        {:ok, {_group, photo}} = Gallery.create_alternate_group(photo)
-
-        {:noreply,
-         socket
-         |> load_photos()
-         |> assign(:mode, :alternate)
-         |> assign(:alternate_primary_id, photo.id)
-         |> assign(:last_primary_id, photo.id)}
+        # Select photo and stay in select mode so user can keep selecting
+        {:ok, _photo} = Gallery.select_photo(photo)
+        {:noreply, load_photos(socket)}
     end
   end
 
@@ -118,6 +111,15 @@ defmodule SelectPhotosWeb.GalleryLive do
         {:noreply, put_flash(socket, :info, "This photo already belongs to a group")}
 
       true ->
+        # Create alternate group on-the-fly if primary doesn't have one yet
+        primary =
+          if primary.alternate_group_id == nil do
+            {:ok, {_group, updated}} = Gallery.create_alternate_group(primary)
+            updated
+          else
+            primary
+          end
+
         group = Gallery.get_group_with_photos(primary.alternate_group_id)
         {:ok, _} = Gallery.add_alternate(group, photo)
         {:noreply, load_photos(socket)}
@@ -138,35 +140,41 @@ defmodule SelectPhotosWeb.GalleryLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} active_page={:gallery} selected_count={@selected_count} total_count={@total_count}>
       <div class="flex flex-col h-full">
-        <%!-- Top bar: directory loader + mode toggle + stats --%>
-        <div class="flex items-center justify-between px-6 py-4 border-b border-[#414755]/20">
-          <div class="flex items-center gap-6">
-            <form phx-submit="load_directory" class="flex items-center gap-3">
+        <%!-- Toolbar --%>
+        <div class="flex items-center justify-between px-6 py-4">
+          <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-extrabold font-['Manrope'] tracking-tight text-[#E5E2E1]">Gallery</h1>
+            <div class="flex gap-2">
+              <span class="px-3 py-1 rounded-full bg-[#2A2A2A] text-[#C1C6D7] text-[10px] font-bold uppercase tracking-wider">
+                All Assets
+              </span>
+              <span class="px-3 py-1 rounded-full bg-[#26467D] text-[#98B5F3] text-[10px] font-bold uppercase tracking-wider">
+                Selected ({@selected_count})
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <%!-- Directory loader --%>
+            <form phx-submit="load_directory" class="flex items-center gap-2">
               <input
                 type="text"
                 name="directory"
                 value={@directory}
                 placeholder="Path to photo directory..."
-                class="bg-[#1C1B1B] border border-[#414755]/30 rounded-lg px-4 py-2 text-sm text-[#E5E2E1] placeholder-[#8B90A0] w-96 focus:outline-none focus:border-[#7BD0FF]/50"
+                class="bg-[#1C1B1B] border-none rounded-lg px-4 py-1.5 text-xs text-[#E5E2E1] placeholder-[#8B90A0] w-72 focus:ring-1 focus:ring-[#7BD0FF]"
               />
               <button
                 type="submit"
-                class="bg-gradient-to-br from-[#7BD0FF] to-[#009BD1] text-[#003549] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest"
+                class="selection-gradient text-[#003549] px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest"
               >
                 Load
               </button>
             </form>
-            <div class="flex items-center gap-4 text-sm text-[#C1C6D7]">
-              <span>{@selected_count} selected</span>
-              <span class="text-[#414755]">|</span>
-              <span>{@total_count} total</span>
-            </div>
-          </div>
 
-          <%!-- Mode toggle pill --%>
-          <div class="flex items-center gap-3">
+            <%!-- Mode toggle pill --%>
             <%= if @mode == :alternate do %>
               <span class="text-xs text-[#C1C6D7]">
                 Click photos to add as alternates
@@ -178,7 +186,7 @@ defmodule SelectPhotosWeb.GalleryLive do
                 if @mode == :alternate do
                   "bg-[#FFB595] text-[#351000]"
                 else
-                  "bg-[#353534] text-[#C1C6D7] hover:bg-[#414755]"
+                  "bg-[#2A2A2A] text-[#C1C6D7] hover:bg-[#353534]"
                 end}
             >
               <span class={"w-2 h-2 rounded-full " <> if @mode == :alternate, do: "bg-[#351000]/40 animate-pulse", else: "bg-[#7BD0FF]"}></span>
@@ -188,16 +196,17 @@ defmodule SelectPhotosWeb.GalleryLive do
         </div>
 
         <%!-- Photo Grid --%>
-        <div class="flex-1 overflow-y-auto p-6">
+        <div class="flex-1 overflow-y-auto p-6 pt-0 hide-scrollbar">
           <%= if @total_count == 0 do %>
             <div class="flex items-center justify-center h-full text-[#8B90A0]">
               <div class="text-center">
+                <span class="material-symbols-outlined text-5xl text-[#353534] mb-4 block">photo_library</span>
                 <p class="text-lg font-['Manrope'] font-bold mb-2">No photos loaded</p>
                 <p class="text-sm">Enter a directory path above and click Load</p>
               </div>
             </div>
           <% else %>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
               <%= for photo <- @photos do %>
                 <.photo_card
                   photo={photo}
@@ -238,20 +247,20 @@ defmodule SelectPhotosWeb.GalleryLive do
     assigns = assign(assigns, :border_class, border_class)
 
     ~H"""
-    <div class={"relative group rounded-lg overflow-hidden bg-[#1C1B1B] #{@border_class} transition-all duration-200"}>
+    <div class={"relative group aspect-[4/5] rounded-lg overflow-hidden bg-[#2A2A2A] #{@border_class} transition-all duration-200"}>
       <img
         src={"/thumbs/#{@photo.filename}"}
         alt={@photo.filename}
         loading="lazy"
-        class="w-full aspect-square object-cover cursor-pointer"
+        class="w-full h-full object-cover cursor-pointer transition-transform duration-500 group-hover:scale-110"
         phx-click="click_photo"
         phx-value-id={@photo.id}
       />
 
-      <%!-- Status badge --%>
-      <%= if @photo.status != "unreviewed" do %>
-        <div class={"absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest #{status_badge_class(@photo)}"}>
-          {status_label(@photo)}
+      <%!-- Selected star badge --%>
+      <%= if @photo.status == "selected" and @photo.is_primary do %>
+        <div class="absolute top-2 right-2 bg-[#7BD0FF]/20 backdrop-blur-md border border-[#7BD0FF]/30 p-1 rounded">
+          <span class="material-symbols-outlined text-[#7BD0FF] text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
         </div>
       <% end %>
 
@@ -262,24 +271,31 @@ defmodule SelectPhotosWeb.GalleryLive do
         </div>
       <% end %>
 
-      <%!-- Hover actions --%>
-      <div class="absolute bottom-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <%= if @photo.status in ["unreviewed", "rejected"] and @mode == :select do %>
-          <button
-            phx-click="reject_photo"
-            phx-value-id={@photo.id}
-            class="p-1.5 rounded-lg bg-[#353534]/80 text-[#C1C6D7] hover:text-[#FFB4AB] hover:bg-[#414755] transition-colors text-xs"
-            title="Reject"
-          >
-            ✕
-          </button>
-        <% end %>
+      <%!-- Hover overlay with actions and filename --%>
+      <div class="absolute inset-0 photo-card-gradient opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+        <div class="flex justify-between items-center">
+          <div class="flex gap-2">
+            <%= if @photo.status in ["unreviewed", "rejected"] and @mode == :select do %>
+              <button
+                phx-click="reject_photo"
+                phx-value-id={@photo.id}
+                class="w-8 h-8 rounded-full bg-[#353534]/80 backdrop-blur-md flex items-center justify-center text-[#E5E2E1] hover:bg-[#FFB4AB] hover:text-[#690005] transition-all"
+                title="Reject"
+              >
+                <span class="material-symbols-outlined text-lg">close</span>
+              </button>
+            <% end %>
+          </div>
+          <span class="text-[10px] font-mono text-[#E5E2E1]/60">{@photo.filename}</span>
+        </div>
       </div>
 
-      <%!-- Filename on hover --%>
-      <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <span class="text-[10px] text-[#C1C6D7] font-mono truncate block">{@photo.filename}</span>
-      </div>
+      <%!-- Status badge --%>
+      <%= if @photo.status != "unreviewed" do %>
+        <div class={"absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest #{status_badge_class(@photo)}"}>
+          {status_label(@photo)}
+        </div>
+      <% end %>
     </div>
     """
   end

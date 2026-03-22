@@ -126,17 +126,18 @@ defmodule SelectPhotosWeb.ComparisonLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
-      <div class="flex flex-col h-full">
+    <Layouts.app flash={@flash} active_page={:compare} selected_count={length(Enum.filter(List.flatten(Enum.map(@groups, & &1.photos)), & &1.is_primary))} total_count={length(List.flatten(Enum.map(@groups, & &1.photos)))}>
+      <div class="flex flex-col h-full overflow-hidden">
         <%= if @current_group == nil do %>
           <%!-- No groups to compare --%>
           <div class="flex items-center justify-center h-full text-[#8B90A0]">
             <div class="text-center">
+              <span class="material-symbols-outlined text-5xl text-[#353534] mb-4 block">compare</span>
               <p class="text-lg font-['Manrope'] font-bold mb-2">No groups to compare</p>
               <p class="text-sm mb-4">Go to the Gallery and select photos with alternates first</p>
               <a
                 href="/gallery"
-                class="bg-gradient-to-br from-[#7BD0FF] to-[#009BD1] text-[#003549] px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest"
+                class="selection-gradient text-[#003549] px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest inline-block"
               >
                 Back to Gallery
               </a>
@@ -144,69 +145,56 @@ defmodule SelectPhotosWeb.ComparisonLive do
           </div>
         <% else %>
           <%!-- Header --%>
-          <div class="flex justify-between items-center px-6 py-4 border-b border-[#414755]/20">
+          <div class="flex justify-between items-end px-6 py-4">
             <div>
-              <h1 class="font-['Manrope'] font-extrabold text-xl text-[#E5E2E1] tracking-tight">
+              <h1 class="font-['Manrope'] font-extrabold text-2xl text-[#E5E2E1] tracking-tight">
                 Image Refinement
               </h1>
               <p class="text-[#C1C6D7] text-sm">
-                Group {@current_index + 1} of {length(@groups)}
+                Set {@current_index + 1} of {length(@groups)}
               </p>
             </div>
             <div class="flex items-center gap-3">
-              <button
-                phx-click="prev_group"
-                disabled={@current_index == 0}
-                class={"px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors " <>
-                  if @current_index == 0,
-                    do: "bg-[#353534]/50 text-[#8B90A0] cursor-not-allowed",
-                    else: "bg-[#353534] text-[#C1C6D7] hover:bg-[#414755]"}
-              >
-                Prev
-              </button>
-              <button
-                phx-click="skip_group"
-                class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-[#353534] text-[#C1C6D7] hover:bg-[#414755] transition-colors"
-              >
-                Skip
-              </button>
-              <button
-                phx-click="confirm_primary"
-                class="bg-gradient-to-br from-[#7BD0FF] to-[#009BD1] text-[#003549] px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest"
-              >
-                Confirm Primary
-              </button>
+              <div class="bg-[#2A2A2A] px-3 py-1.5 rounded-lg flex items-center gap-2 border border-[#414755]/10">
+                <span class="w-2 h-2 rounded-full bg-[#7BD0FF] animate-pulse"></span>
+                <span class="text-xs font-bold uppercase tracking-tighter text-[#C1C6D7]">Live Comparison</span>
+              </div>
             </div>
           </div>
 
-          <%!-- Comparison workspace --%>
-          <div class="flex-1 flex gap-6 p-6 min-h-0 overflow-hidden">
+          <%!-- Comparison workspace (Asymmetric Layout) --%>
+          <div class="flex-1 flex gap-6 p-6 pt-2 min-h-0 overflow-hidden">
             <%!-- Left: Primary photo (large) --%>
-            <div class="flex-[3] relative group bg-[#1C1B1B] rounded-xl overflow-hidden border border-[#414755]/10">
+            <div class="flex-[3] relative group bg-[#1C1B1B] rounded-xl overflow-hidden shadow-2xl border border-[#414755]/5">
               <img
                 src={"/photos/#{@primary.filename}"}
                 alt={@primary.filename}
                 class="w-full h-full object-contain"
               />
               <%!-- Floating HUD --%>
-              <div class="absolute bottom-6 left-6 right-6 bg-[#353534]/80 backdrop-blur-xl p-4 rounded-xl border border-[#414755]/20 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div class="absolute bottom-6 left-6 right-6 glass-panel p-4 rounded-xl border border-[#414755]/20 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div class="flex flex-col">
                   <span class="text-[#7BD0FF] font-['Manrope'] font-bold text-sm tracking-wide">
-                    PRIMARY
+                    SEED CANDIDATE
                   </span>
                   <span class="text-[10px] text-[#C1C6D7] font-mono mt-1">
                     {@primary.filename}
                   </span>
                 </div>
+                <div class="flex gap-2">
+                  <button class="p-2 bg-[#201F1F] rounded-lg text-[#E5E2E1] hover:bg-[#393939] transition-colors">
+                    <span class="material-symbols-outlined">zoom_in</span>
+                  </button>
+                </div>
               </div>
               <%!-- Label --%>
               <div class="absolute top-6 left-6 bg-[#7BD0FF]/90 text-[#003549] px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">
-                Primary
+                Master View
               </div>
             </div>
 
             <%!-- Right: Alternates sidebar --%>
-            <div class="flex-[1] flex flex-col gap-4 overflow-y-auto pr-1">
+            <div class="flex-[1] flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
               <%= if @alternates == [] do %>
                 <div class="flex items-center justify-center h-full text-[#8B90A0] text-sm">
                   No alternates remaining
@@ -227,30 +215,31 @@ defmodule SelectPhotosWeb.ComparisonLive do
                       class="absolute inset-0 bg-black/40 opacity-0 group-hover/alt:opacity-100 flex items-center justify-center transition-opacity"
                     >
                       <div class="bg-[#353534] px-4 py-2 rounded-full flex items-center gap-2 text-xs font-bold text-[#E5E2E1]">
-                        Swap to Primary
+                        <span class="material-symbols-outlined text-sm">swap_horiz</span> Swap Seed
                       </div>
                     </button>
                   </div>
                   <div class="flex justify-between items-center">
-                    <span class="text-[10px] text-[#C1C6D7] font-mono truncate">
-                      {alt.filename}
-                    </span>
+                    <div class="flex flex-col">
+                      <span class="text-xs font-bold font-['Manrope'] text-[#E5E2E1]">Candidate</span>
+                      <span class="text-[10px] text-[#C1C6D7] font-mono truncate">{alt.filename}</span>
+                    </div>
                     <div class="flex gap-1.5">
                       <button
                         phx-click="swap_primary"
                         phx-value-id={alt.id}
-                        class="bg-[#353534] text-[#C1C6D7] hover:text-[#7BD0FF] p-2 rounded-lg transition-colors"
-                        title="Swap to primary"
+                        class="bg-[#201F1F] text-[#E5E2E1] hover:text-[#7BD0FF] p-2 rounded-lg flex items-center justify-center hover:bg-[#393939] transition-all"
+                        title="Swap with Master"
                       >
-                        &#8646;
+                        <span class="material-symbols-outlined text-base">swap_horiz</span>
                       </button>
                       <button
                         phx-click="reject_alternate"
                         phx-value-id={alt.id}
-                        class="bg-[#353534] text-[#C1C6D7] hover:text-[#FFB4AB] p-2 rounded-lg transition-colors"
+                        class="bg-[#201F1F] text-[#C1C6D7] hover:text-[#FFB4AB] p-2 rounded-lg flex items-center justify-center hover:bg-[#393939] transition-all"
                         title="Reject"
                       >
-                        ✕
+                        <span class="material-symbols-outlined text-base">close</span>
                       </button>
                     </div>
                   </div>
@@ -258,6 +247,42 @@ defmodule SelectPhotosWeb.ComparisonLive do
               <% end %>
             </div>
           </div>
+
+          <%!-- Footer Toolbar --%>
+          <footer class="bg-[#1C1B1B] h-14 mx-6 mb-4 rounded-xl flex items-center px-6 justify-between border border-[#414755]/5">
+            <div class="flex items-center gap-4">
+              <button
+                phx-click="prev_group"
+                disabled={@current_index == 0}
+                class={"text-[#C1C6D7] hover:text-[#7BD0FF] flex items-center gap-2 transition-colors " <> if(@current_index == 0, do: "opacity-30 cursor-not-allowed", else: "")}
+              >
+                <span class="material-symbols-outlined text-lg">arrow_back</span>
+                <span class="text-xs font-bold uppercase tracking-widest">Prev Set</span>
+              </button>
+              <div class="h-4 w-px bg-[#414755]/20"></div>
+              <button
+                phx-click="confirm_primary"
+                class="text-[#C1C6D7] hover:text-[#FFB4AB] flex items-center gap-2 transition-colors"
+              >
+                <span class="material-symbols-outlined text-lg">delete</span>
+                <span class="text-xs font-bold uppercase tracking-widest">Reject Others</span>
+              </button>
+            </div>
+            <div class="flex items-center gap-3">
+              <button
+                phx-click="skip_group"
+                class="text-[#C1C6D7] text-xs font-bold uppercase tracking-widest px-4 py-2 hover:bg-[#393939] rounded-lg transition-colors"
+              >
+                Skip Set
+              </button>
+              <button
+                phx-click="confirm_primary"
+                class="selection-gradient text-[#003549] px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-[#7BD0FF]/20"
+              >
+                Next Batch
+              </button>
+            </div>
+          </footer>
         <% end %>
       </div>
     </Layouts.app>
